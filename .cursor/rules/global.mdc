@@ -1,0 +1,44 @@
+---
+description: Global rules that apply to all files in the project
+globs: "**/*"
+alwaysApply: true
+---
+
+# Global Rules
+
+## Code Quality
+
+- Write self-documenting code with clear naming
+- Keep functions focused — single responsibility principle
+- Use early returns to reduce nesting depth
+- Maximum function length: 30 lines
+- Maximum file length: 300 lines
+
+## TypeScript
+
+- Enable strict mode in tsconfig
+- No `any` types — use `unknown` and narrow
+- Prefer interfaces for object shapes, types for unions/intersections
+- Use const assertions for literal types
+- Export types alongside their implementations
+
+## Naming Conventions
+
+- Files: `kebab-case.ts`
+- Variables/functions: `camelCase`
+- Classes/types/interfaces: `PascalCase`
+- Constants: `UPPER_SNAKE_CASE`
+- Boolean variables: prefix with `is`, `has`, `should`, `can`
+
+## Imports
+
+- Group imports: external → internal → relative
+- Use path aliases (`@/`) for deep imports
+- No circular dependencies
+- Prefer named exports over default exports
+
+## Comments
+
+- Don't comment obvious code
+- Use comments to explain WHY, not WHAT
+- Use TODO/FIXME with ticket references: `// TODO(JIRA-123): description`

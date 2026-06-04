@@ -1,0 +1,57 @@
+---
+description: UI component rules for React/frontend development
+globs: "src/components/**,src/pages/**,**/*.tsx,**/*.jsx"
+alwaysApply: false
+---
+
+# UI Rules
+
+## Component Structure
+
+```tsx
+// 1. Imports (grouped)
+import { useState, useCallback } from "react";
+import { Button } from "@/components/ui";
+import { useAuth } from "@/hooks/use-auth";
+import type { UserProps } from "./types";
+
+// 2. Types (if not in separate file)
+interface Props {
+  user: UserProps;
+  onSave: (data: FormData) => void;
+}
+
+// 3. Component
+export function UserProfile({ user, onSave }: Props) {
+  // hooks first
+  const [isEditing, setIsEditing] = useState(false);
+  const { currentUser } = useAuth();
+
+  // handlers
+  const handleSave = useCallback(() => {
+    // ...
+  }, []);
+
+  // early returns for loading/error states
+  if (!user) return null;
+
+  // render
+  return <section aria-label="User profile">{/* ... */}</section>;
+}
+```
+
+## Rules
+
+- One component per file
+- Props interface defined above component or in `types.ts`
+- Use semantic HTML elements
+- All interactive elements must be keyboard accessible
+- Use `aria-label` for non-text interactive elements
+- Prefer CSS Modules or Tailwind — no inline styles for layout
+- Test user interactions, not implementation details
+
+## Responsive Design
+
+- Mobile-first approach
+- Use relative units (rem, em) not px for typography
+- Test at breakpoints: 320px, 768px, 1024px, 1440px

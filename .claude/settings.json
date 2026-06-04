@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": ["read_file", "write_file", "run_terminal_command"],
+    "deny": ["delete_file_without_confirmation"]
+  },
+  "preferences": {
+    "autoCommit": false,
+    "testBeforeCommit": true,
+    "maxFileSize": 500
+  },
+  "context": {
+    "includeFiles": ["CLAUDE.md", "AGENTS.md", "ai-agents/rules/**/*.md"]
+  }
+}
