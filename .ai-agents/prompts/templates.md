@@ -9,7 +9,7 @@
 ```
 Review the following code for:
 1. Security vulnerabilities (OWASP Top 10)
-2. Performance issues (N+1 queries, unnecessary re-renders, memory leaks)
+2. Performance issues (N+1 queries, memory leaks, blocking I/O)
 3. Error handling completeness
 4. Adherence to project conventions
 5. Test coverage gaps
@@ -35,7 +35,7 @@ Goals:
 - Reduce cyclomatic complexity
 - Extract reusable functions
 - Improve naming
-- Add proper TypeScript types
+- Use appropriate types for the language
 - Maintain existing behavior (no functional changes)
 
 Constraints:
