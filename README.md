@@ -1,261 +1,111 @@
 # Agentic Hub
 
-A centralized repository of **AI Rules** and **Agents** designed to work across multiple AI-powered IDEs — GitHub Copilot, Claude Code, and Cursor.
+A centralized repository of **AI Rules**, **Agents**, and **Prompt Templates** for AI-powered IDEs — GitHub Copilot, Claude Code, and Cursor.
 
-## Overview
+All rules and agent definitions are platform-agnostic and live in `.ai-agents/`. Each IDE has a thin adapter (`.github/`, `.claude/`, `.cursor/`) that references them.
 
-This project demonstrates how to structure, write, and use AI rules and agents to enforce coding standards, automate workflows, and maintain consistency across teams. The architecture follows a **"central brain"** pattern: canonical rules live in `ai-agents/`, with platform-specific adapters in `.github/`, `.claude/`, and `.cursor/`.
+---
+
+## How the Pipeline Works
+
+Every code change goes through one entry point — the **Context Collector Agent** — which gathers the JIRA ticket details and technical context once. It then hands a structured **Context Package** to each specialist agent. No agent asks questions twice.
+
+```mermaid
+flowchart TD
+    DEV([👤 Developer\nstarts a change]):::person
+
+    subgraph ENTRY["Step 1 — Context Collection"]
+        CC["🧭 Context Collector Agent\nAsks JIRA ID · AC · Change description\nAgents to run · Technical context"]:::collector
+    end
+
+    subgraph PKG["Context Package produced"]
+        CP["📦 JIRA ticket · Acceptance Criteria\nChange description · Agent-specific context"]:::package
+    end
+
+    subgraph PIPELINE["Step 2 — Specialist Agents run in order"]
+        direction LR
+        R["🔍 Review\nAgent"]:::agent
+        S["🔐 Security\nAgent"]:::agent
+        P["⚡ Performance\nAgent"]:::agent
+        T["🧪 Testing\nAgent"]:::agent
+        A["🏛️ Architecture\nAgent"]:::agent
+        D["📝 Documentation\nAgent"]:::agent
+        R --> S --> P --> T --> A --> D
+    end
+
+    subgraph OUT["Step 3 — Consolidated Output"]
+        SUM["📊 Validation Summary\nVerdict per agent · Blocking issues · Action items"]:::output
+    end
+
+    DEV --> CC
+    CC --> CP
+    CP --> PIPELINE
+    PIPELINE --> SUM
+
+    classDef person fill:#f0f4ff,stroke:#4a6cf7,color:#1a1a2e
+    classDef collector fill:#e8f4fd,stroke:#2196f3,color:#0d47a1
+    classDef package fill:#fff8e1,stroke:#ffc107,color:#5d4037
+    classDef agent fill:#e8f5e9,stroke:#4caf50,color:#1b5e20
+    classDef output fill:#fce4ec,stroke:#e91e63,color:#880e4f
+```
+
+### Slash Commands (Claude Code)
+
+| Command      | What it does                                                      |
+| ------------ | ----------------------------------------------------------------- |
+| `/validate`  | Full pipeline — Context Collector → all selected agents → summary |
+| `/review`    | Context Collector → Review Agent only                             |
+| `/gen-tests` | Context Collector → Testing Agent only                            |
+
+---
+
+## Agents
+
+All agent definitions live in `.ai-agents/agents/`.
+
+| Agent                      | File                         | Role                                                                                                                                 | When to Run                                     |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| 🧭 **Context Collector**   | `context-collector-agent.md` | Gathers JIRA ticket, AC, and technical context once. Produces the Context Package for all other agents.                              | **Always first** — before any other agent       |
+| 🔍 **Review Agent**        | `review-agent.md`            | Reviews code for correctness, readability, conventions, and complexity. Validates every Acceptance Criteria item. Flags scope creep. | Every PR and AI-generated code change           |
+| 🔐 **Security Agent**      | `security-agent.md`          | Scans for OWASP Top 10 vulnerabilities — injection, XSS, CSRF, broken auth, secrets exposure. Scores risk level.                     | Every code change; new dependencies             |
+| 🧪 **Testing Agent**       | `testing-agent.md`           | Maps each AC item to test scenarios, drafts a test plan internally, then generates unit, integration, and E2E tests.                 | After generating or modifying code              |
+| ⚡ **Performance Agent**   | `performance-agent.md`       | Detects N+1 queries, O(n²) algorithms, memory leaks, blocking I/O, and missing indexes. Validates against latency targets.           | Hot paths; new DB queries; pre-production       |
+| 🏛️ **Architecture Agent**  | `architecture-agent.md`      | Enforces Clean Architecture layer boundaries, detects circular dependencies, validates module structure and API contracts.           | New modules; structural or cross-module changes |
+| 📝 **Documentation Agent** | `documentation-agent.md`     | Checks doc comment coverage on all public APIs, generates missing docs, validates OpenAPI specs match implementation.                | New public APIs; after feature additions        |
+
+---
+
+## Rules
+
+All rules live in `.ai-agents/rules/`. They are language and framework agnostic — no TypeScript, React, or Jest specifics.
+
+| Rule File               | Covers                                                                                                       | Key Standards                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `coding-rules.md`       | Naming conventions, function design, error handling, module structure, async patterns, comments              | Max 50 lines/function · 500 lines/file · Early returns · Domain error types · No circular deps      |
+| `security-rules.md`     | Input validation, authentication, authorization, secrets, injection prevention, HTTP headers, dependencies   | OWASP Top 10 · Parameterized queries · No hardcoded secrets · Allowlist-based sanitization          |
+| `testing-rules.md`      | Test structure, naming, AAA pattern, mocking, coverage targets, anti-patterns, integration standards         | 80% unit coverage · 60% integration · Mock only at boundaries · Independent & deterministic tests   |
+| `architecture-rules.md` | Layer boundaries, module layout, dependency injection, request/response patterns, event-driven communication | Presentation → Application → Domain · No layer skipping · Depend on abstractions · No circular deps |
+| `api-rules.md`          | HTTP methods, status codes, versioning, response envelopes, pagination, error format, request validation     | Consistent `{ data }` / `{ error }` envelope · `/v1/` versioning · 400 with field-level errors      |
 
 ---
 
 ## Repository Structure
 
-```
-├── 📄 CLAUDE.md                          ← [CLAUDE CODE] Auto-loaded every session
-├── 📄 AGENTS.md                          ← [BOTH] Shared agent instructions
-│
-├── 📂 .claude/                           ← [CLAUDE CODE] Config directory
-│     ├── settings.json                   ← Shared settings (commit this)
-│     ├── agents/                         ← Custom subagents
-│     ├── commands/                       ← Custom slash commands
-│     ├── hooks/                          ← Tool event scripts
-│     └── skills/                         ← Project-scoped on-demand skills
-│
-├── 📂 .github/                           ← [COPILOT] GitHub config
-│     ├── 📄 copilot-instructions.md      ← Always-on repo-wide rules
-│     ├── 📂 instructions/                ← Path-scoped rules (applyTo globs)
-│     │     ├── frontend.instructions.md
-│     │     └── backend.instructions.md
-│     └── 📂 agents/                      ← On-demand Copilot agents
-│           └── test-agent.agent.md
-│
-├── 📂 .cursor/                           ← [CURSOR] Rules directory
-│     └── 📂 rules/                       ← .mdc files (NOT .cursorrules)
-│           ├── global.mdc
-│           └── ui-rules.mdc
-│
-├── 📂 .vscode/                           ← [VS CODE] Workspace settings
-│     ├── settings.json
-│     └── extensions.json
-│
-└── 📂 ai-agents/                         ← THE CENTRAL BRAIN (platform-agnostic)
-      ├── 📂 rules/                        ← Core logic in Markdown
-      │     ├── ui-standards.md
-      │     └── testing-logic.md
-      ├── 📂 prompts/                      ← Reusable prompt templates
-      └── 📂 examples/                     ← Gold-standard code snippets
-```
-
----
-
-## How It Works
-
-### The Central Brain (`ai-agents/`)
-
-The `ai-agents/` directory contains platform-agnostic rules and prompts. This is the **single source of truth** — platform-specific configs reference or adapt from here.
-
-| Directory             | Purpose                                           |
-| --------------------- | ------------------------------------------------- |
-| `ai-agents/rules/`    | Core coding standards (UI, testing, architecture) |
-| `ai-agents/prompts/`  | Reusable prompt templates for common tasks        |
-| `ai-agents/examples/` | Gold-standard code snippets AI should emulate     |
-
-### Platform Adapters
-
-Each IDE has its own config format. The adapters translate central rules into platform-specific syntax:
-
-| Platform       | Config Location         | Format                          |
-| -------------- | ----------------------- | ------------------------------- |
-| GitHub Copilot | `.github/`              | `.instructions.md`, `.agent.md` |
-| Claude Code    | `.claude/`, `CLAUDE.md` | Markdown, JSON                  |
-| Cursor         | `.cursor/rules/`        | `.mdc` files                    |
-
----
-
-## Demo & Usage
-
-### 1. Rules (Always-On Instructions)
-
-Rules are loaded automatically and guide AI behavior for every interaction.
-
-#### GitHub Copilot — Workspace Rule
-
-File: `.github/copilot-instructions.md`
-
-```markdown
-# GitHub Copilot Instructions
-
-## General Coding Rules
-
-- Write clean, readable, and maintainable code
-- Use early returns to reduce nesting
-- All public APIs must have TypeScript types
-
-## Security
-
-- Never hardcode secrets or credentials
-- Use parameterized queries for database operations
-```
-
-#### GitHub Copilot — Scoped Rule
-
-File: `.github/instructions/frontend.instructions.md`
-
-```markdown
----
-applyTo: "src/frontend/**,**/*.tsx,**/*.jsx"
----
-
-# Frontend Instructions
-
-- Use functional components with hooks
-- Ensure accessible contrast ratios (WCAG AA)
-- Lazy load routes and heavy components
-```
-
-#### Claude Code — Auto-Loaded Rule
-
-File: `CLAUDE.md` (loaded automatically every session)
-
-```markdown
-# CLAUDE.md
-
-- Use TypeScript for all new code
-- Keep functions under 30 lines
-- Commit messages: type(scope): description
-```
-
-#### Cursor — MDC Rule
-
-File: `.cursor/rules/global.mdc`
-
-```markdown
----
-description: Global rules for all files
-globs: "**/*"
-alwaysApply: true
----
-
-# Global Rules
-
-- Use self-documenting code with clear naming
-- No `any` types — use `unknown` and narrow
-- Prefer named exports over default exports
-```
-
----
-
-### 2. Agents (On-Demand AI Personas)
-
-Agents are invoked explicitly and have specific roles, tools, and behavioral instructions.
-
-#### GitHub Copilot Agent
-
-File: `.github/agents/test-agent.agent.md`
-
-```markdown
----
-name: "Test Agent"
-description: "Generates and maintains test suites"
-tools:
-  - read_file
-  - create_file
-  - run_in_terminal
----
-
-# Test Agent
-
-You are a testing specialist. Analyze source files and generate
-comprehensive tests covering happy paths, edge cases, and errors.
-```
-
-**Usage in VS Code Chat:**
-
-```
-@test-agent Generate tests for src/services/user-service.ts
-```
-
-#### Claude Code Agent
-
-File: `.claude/agents/code-reviewer.md`
-
-```markdown
-# Code Review Subagent
-
-You are a code review specialist. When invoked:
-
-1. Read the specified files or diff
-2. Analyze for security, performance, and style issues
-3. Provide structured feedback with severity levels
-```
-
-**Usage in Claude Code:**
-
-```
-/review src/api/auth-controller.ts
-```
-
-#### Shared Agents (Cross-Platform)
-
-File: `AGENTS.md` — defines agents recognized by both Claude Code and Copilot:
-
-```markdown
-## Code Reviewer
-
-**Role:** Senior code reviewer
-**Output:** Critical / Warning / Suggestion
-
-## Test Generator
-
-**Role:** Generates comprehensive test suites
-
-## Docs Writer
-
-**Role:** Technical documentation specialist
-```
-
----
-
-### 3. Slash Commands (Claude Code)
-
-Custom commands defined in `.claude/commands/`:
-
-```bash
-# Run a code review
-/review src/services/
-
-# Generate tests
-/gen-tests src/utils/validator.ts --coverage=full
-```
-
----
-
-### 4. Prompt Templates (`ai-agents/prompts/`)
-
-Reusable templates for common tasks:
-
-```markdown
-## Code Review Prompt
-
-Review the following code for:
-
-1. Security vulnerabilities (OWASP Top 10)
-2. Performance issues
-3. Error handling completeness
-   ...
-
-## Bug Fix Prompt
-
-**Expected:** {{EXPECTED}}
-**Actual:** {{ACTUAL}}
-Please identify root cause and provide a fix.
-```
+| Path                    | Purpose                                               |
+| ----------------------- | ----------------------------------------------------- |
+| `.ai-agents/agents/`    | All 7 agent definitions — central brain               |
+| `.ai-agents/rules/`     | 5 canonical, language-agnostic rule files             |
+| `.ai-agents/prompts/`   | Reusable prompt templates                             |
+| `.ai-agents/workflows/` | End-to-end validation pipelines                       |
+| `.claude/commands/`     | Slash commands (`/validate`, `/review`, `/gen-tests`) |
+| `.github/`              | GitHub Copilot rules and instructions                 |
+| `.cursor/rules/`        | Cursor `.mdc` rule files                              |
+| `CLAUDE.md`             | Auto-loaded instructions for Claude Code              |
+| `AGENTS.md`             | Shared agent pipeline reference                       |
 
 ---
 
 ## Getting Started
-
-### Quick Setup
 
 1. **Clone the repository:**
 
@@ -263,48 +113,15 @@ Please identify root cause and provide a fix.
    git clone https://github.com/codal-georgem/agentic-hub-codal.git
    ```
 
-2. **Open in VS Code** with GitHub Copilot extension installed.
+2. **Open in VS Code** with GitHub Copilot or Claude Code installed.
 
-3. **Rules activate automatically** — Copilot will follow `.github/copilot-instructions.md` for all code generation.
+3. **Start a validation run:**
 
-4. **Invoke agents** by typing `@test-agent` in VS Code Chat.
+   ```
+   /validate
+   ```
 
-### Adapting for Your Project
-
-1. Copy the directories you need (`.github/`, `.claude/`, `.cursor/`, `ai-agents/`) into your project.
-2. Edit `ai-agents/rules/` to match your team's standards.
-3. Update platform adapters to reference your rules.
-4. Add project-specific agents for your workflows.
-
-### Adding a New Rule
-
-1. Write the canonical rule in `ai-agents/rules/your-rule.md`
-2. Create platform adapters:
-   - `.github/instructions/your-rule.instructions.md` (with `applyTo` frontmatter)
-   - `.cursor/rules/your-rule.mdc` (with `globs` frontmatter)
-   - Reference in `CLAUDE.md` context section
-
----
-
-## Platform Comparison
-
-| Feature           | GitHub Copilot            | Claude Code        | Cursor                     |
-| ----------------- | ------------------------- | ------------------ | -------------------------- |
-| Auto-loaded rules | `copilot-instructions.md` | `CLAUDE.md`        | `global.mdc` (alwaysApply) |
-| Scoped rules      | `applyTo` globs           | N/A                | `globs` in frontmatter     |
-| Agents            | `.agent.md` files         | `agents/` folder   | N/A                        |
-| Slash commands    | N/A                       | `commands/` folder | N/A                        |
-| Hooks             | N/A                       | `hooks/` folder    | N/A                        |
-| Skills            | N/A                       | `skills/` folder   | N/A                        |
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add your rules or agents (follow the central brain pattern)
-4. Submit a pull request
+   The Context Collector Agent will ask for your JIRA ticket ID and guide you through the rest.
 
 ---
 
