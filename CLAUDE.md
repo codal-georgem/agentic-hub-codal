@@ -47,6 +47,7 @@ ai-agents/          → Platform-agnostic core rules and prompts (legacy)
 
 All code changes are validated by a pipeline of specialized agents defined in `.ai-agents/agents/`.
 Always start with the **Context Collector Agent**, then invoke the specialist agents in order.
+Follow `.ai-agents/instructions/validation-gate.instructions.md` for explicit JIRA-first intake, mandatory Review + Security checks on every code change, and the required `AI Agent Quality Matrix` plus `Final Result` output on every validation response.
 
 | Agent                 | File                                           | Responsibility                       |
 | --------------------- | ---------------------------------------------- | ------------------------------------ |

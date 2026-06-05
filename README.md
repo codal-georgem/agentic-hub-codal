@@ -79,13 +79,106 @@ All agent definitions live in `.ai-agents/agents/`.
 
 All rules live in `.ai-agents/rules/`. They are language and framework agnostic — no TypeScript, React, or Jest specifics.
 
-| Rule File               | Covers                                                                                                       | Key Standards                                                                                       |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `coding-rules.md`       | Naming conventions, function design, error handling, module structure, async patterns, comments              | Max 50 lines/function · 500 lines/file · Early returns · Domain error types · No circular deps      |
-| `security-rules.md`     | Input validation, authentication, authorization, secrets, injection prevention, HTTP headers, dependencies   | OWASP Top 10 · Parameterized queries · No hardcoded secrets · Allowlist-based sanitization          |
-| `testing-rules.md`      | Test structure, naming, AAA pattern, mocking, coverage targets, anti-patterns, integration standards         | 80% unit coverage · 60% integration · Mock only at boundaries · Independent & deterministic tests   |
-| `architecture-rules.md` | Layer boundaries, module layout, dependency injection, request/response patterns, event-driven communication | Presentation → Application → Domain · No layer skipping · Depend on abstractions · No circular deps |
-| `api-rules.md`          | HTTP methods, status codes, versioning, response envelopes, pagination, error format, request validation     | Consistent `{ data }` / `{ error }` envelope · `/v1/` versioning · 400 with field-level errors      |
+| Rule File                         | Covers                                                                                                       | Key Standards                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `coding-rules.md`                 | Naming conventions, function design, error handling, module structure, async patterns, comments              | Max 50 lines/function · 500 lines/file · Early returns · Domain error types · No circular deps      |
+| `security-rules.md`               | Input validation, authentication, authorization, secrets, injection prevention, HTTP headers, dependencies   | OWASP Top 10 · Parameterized queries · No hardcoded secrets · Allowlist-based sanitization          |
+| `testing-rules.md`                | Test structure, naming, AAA pattern, mocking, coverage targets, anti-patterns, integration standards         | 80% unit coverage · 60% integration · Mock only at boundaries · Independent & deterministic tests   |
+| `architecture-rules.md`           | Layer boundaries, module layout, dependency injection, request/response patterns, event-driven communication | Presentation → Application → Domain · No layer skipping · Depend on abstractions · No circular deps |
+| `api-rules.md`                    | HTTP methods, status codes, versioning, response envelopes, pagination, error format, request validation     | Consistent `{ data }` / `{ error }` envelope · `/v1/` versioning · 400 with field-level errors      |
+| `validation-gate.instructions.md` | Shared intake and validation contract for AI instruction entry points                                        | Ask JIRA first · Require Review + Security · Standard quality matrix and final result output        |
+
+---
+
+## Reuse Validation Gate In Another Project
+
+Use `.ai-agents/instructions/validation-gate.instructions.md` when you want one shared instruction file that multiple instruction files can reference.
+
+### Step 1 — Copy The Shared Rule File
+
+Copy this file into the target repository:
+
+```text
+.ai-agents/instructions/validation-gate.instructions.md
+```
+
+### Step 2 — Paste This Line Into Main Instruction Files
+
+Use this exact line:
+
+```md
+Follow `.ai-agents/instructions/validation-gate.instructions.md` for explicit JIRA-first intake, mandatory Review + Security checks on every code change, and the required `AI Agent Quality Matrix` plus `Final Result` output on every validation response.
+```
+
+### Step 3 — Add It In The Right Place
+
+Paste that line near the top of each main instruction file, in the section that explains the shared workflow or core rules.
+
+**GitHub Copilot**
+
+File:
+
+```text
+.github/copilot-instructions.md
+```
+
+Recommended placement: directly under the opening AI workflow section, after the lines that say rules and agents live in `.ai-agents/`.
+
+Example:
+
+```md
+## AI Run Agents
+
+All AI-generated code is validated by a pipeline of specialized agents.
+Rules for each domain are defined in `.ai-agents/rules/`. Agents are defined in `.ai-agents/agents/`.
+Follow `.ai-agents/instructions/validation-gate.instructions.md` for explicit JIRA-first intake, mandatory Review + Security checks on every code change, and the required `AI Agent Quality Matrix` plus `Final Result` output on every validation response.
+```
+
+**Claude Code**
+
+File:
+
+```text
+CLAUDE.md
+```
+
+Recommended placement: inside the `AI Run Agents` section, immediately after the line that says the Context Collector Agent runs first.
+
+Example:
+
+```md
+## AI Run Agents
+
+All code changes are validated by a pipeline of specialized agents defined in `.ai-agents/agents/`.
+Always start with the **Context Collector Agent**, then invoke the specialist agents in order.
+Follow `.ai-agents/instructions/validation-gate.instructions.md` for explicit JIRA-first intake, mandatory Review + Security checks on every code change, and the required `AI Agent Quality Matrix` plus `Final Result` output on every validation response.
+```
+
+**Shared Agent Instructions**
+
+File:
+
+```text
+AGENTS.md
+```
+
+Recommended placement: at the top of the `Agent Pipeline` section, immediately after the summary sentence about the Context Collector Agent.
+
+Example:
+
+```md
+## Agent Pipeline
+
+Always start with the **Context Collector Agent**. It gathers JIRA ticket details and technical context once, then passes a Context Package to each specialist agent. Specialist agents do not ask questions — they act on the Context Package.
+Follow `.ai-agents/instructions/validation-gate.instructions.md` for explicit JIRA-first intake, mandatory Review + Security checks on every code change, and the required `AI Agent Quality Matrix` plus `Final Result` output on every validation response.
+```
+
+### What This Gives You
+
+- One shared file to update when the intake or validation policy changes
+- Short main instruction files with only one include line
+- Consistent JIRA-first prompting across Copilot, Claude, and shared agent docs
+- Consistent final output with `AI Agent Quality Matrix` and `Final Result`
 
 ---
 
@@ -94,7 +187,7 @@ All rules live in `.ai-agents/rules/`. They are language and framework agnostic 
 | Path                    | Purpose                                               |
 | ----------------------- | ----------------------------------------------------- |
 | `.ai-agents/agents/`    | All 7 agent definitions — central brain               |
-| `.ai-agents/rules/`     | 5 canonical, language-agnostic rule files             |
+| `.ai-agents/rules/`     | 6 canonical, language-agnostic rule files             |
 | `.ai-agents/prompts/`   | Reusable prompt templates                             |
 | `.ai-agents/workflows/` | End-to-end validation pipelines                       |
 | `.claude/commands/`     | Slash commands (`/validate`, `/review`, `/gen-tests`) |

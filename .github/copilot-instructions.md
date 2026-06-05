@@ -7,6 +7,7 @@
 
 All AI-generated code is validated by a pipeline of specialized agents.
 Rules for each domain are defined in `.ai-agents/rules/`. Agents are defined in `.ai-agents/agents/`.
+Follow `.ai-agents/instructions/validation-gate.instructions.md` for explicit JIRA-first intake, mandatory Review + Security checks on every code change, and the required `AI Agent Quality Matrix` plus `Final Result` output on every validation response.
 
 | Agent               | File                                       | When to Use                     |
 | ------------------- | ------------------------------------------ | ------------------------------- |

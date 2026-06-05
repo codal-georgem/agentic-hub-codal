@@ -6,6 +6,7 @@
 ## Agent Pipeline
 
 Always start with the **Context Collector Agent**. It gathers JIRA ticket details and technical context once, then passes a Context Package to each specialist agent. Specialist agents do not ask questions — they act on the Context Package.
+Follow `.ai-agents/instructions/validation-gate.instructions.md` for explicit JIRA-first intake, mandatory Review + Security checks on every code change, and the required `AI Agent Quality Matrix` plus `Final Result` output on every validation response.
 
 ```
 Context Collector → Review → Security → Performance → Testing → Architecture → Documentation
